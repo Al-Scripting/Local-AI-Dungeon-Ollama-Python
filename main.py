@@ -1,3 +1,4 @@
+
 import json
 import os
 import sys
@@ -17,6 +18,7 @@ MODEL_NAME = os.environ.get("AI_DUNGEON_MODEL", "gemma3:latest")
 
 # ---------------- Utility ----------------
 
+
 def load_rules():
     with open(RULES_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -34,7 +36,7 @@ def init_state(rules):
         "inventory": start.get("inventory", []),
         "flags": start.get("flags", {}),
         "hp": start.get("hp", 10),
-        "turns": 0
+        "turns": 0,
     }
     return state
 
@@ -63,46 +65,33 @@ def append_transcript(entry):
 
 # ---------------- Command validation ----------------
 
-def is_valid_command(user_input, commands):
-    """
-    Commands in rules.json may contain placeholders like:
-      - "move <place>"
-      - "take <item>"
-      - "use <item> on <target>"
-    We treat them as simple patterns.
-    """
+
+def is_valid_command(user_input, rules):
     user_input = user_input.strip().lower()
     if not user_input:
         return False
 
-    # Direct match
-    if user_input in commands:
-        return True
+    parts = user_input.split()
+    verb = parts[0]
 
-    # Pattern-based match
-    for cmd in commands:
-        parts = cmd.split()
-        u_parts = user_input.split()
-
-        # allow placeholders: <...>
-        if len(u_parts) < len(parts):
-            continue
-
-        match = True
-        for p_cmd, p_user in zip(parts, u_parts):
-            if p_cmd.startswith("<") and p_cmd.endswith(">"):
-                continue  # placeholder: accept anything
-            if p_cmd != p_user:
-                match = False
-                break
-
-        if match:
-            return True
+    # Find matching command template (e.g., "move <direction>")
+    for command_template in rules.get("COMMANDS", []):
+        template_parts = command_template.split()
+        if verb == template_parts[0]:
+            # If it's a move command, check if the second part is a valid direction
+            if verb == "move" and len(parts) > 1:
+                direction = parts[1]
+                if direction in rules.get("DIRECTIONS", []):
+                    return True
+            # For other commands, a simple verb match is enough for now
+            elif len(parts) == 1:
+                return True
 
     return False
 
 
 # ---------------- LLM interaction ----------------
+
 
 def build_messages(gm_prompt, rules, state, history, user_input):
     """
@@ -115,32 +104,17 @@ def build_messages(gm_prompt, rules, state, history, user_input):
 
     recent_summary = []
     for turn in recent:
-        recent_summary.append({
-            "player": turn["user"],
-            "gm": turn["gm"]
-        })
+        recent_summary.append({"player": turn["user"], "gm": turn["gm"]})
 
     return [
+        {"role": "system", "content": gm_prompt},
+        {"role": "system", "content": "RULES:\n" + json.dumps(rules)},
+        {"role": "system", "content": "CURRENT_STATE:\n" + json.dumps(state)},
         {
             "role": "system",
-            "content": gm_prompt
+            "content": "LAST_TURNS:\n" + json.dumps(recent_summary),
         },
-        {
-            "role": "system",
-            "content": "RULES:\n" + json.dumps(rules)
-        },
-        {
-            "role": "system",
-            "content": "CURRENT_STATE:\n" + json.dumps(state)
-        },
-        {
-            "role": "system",
-            "content": "LAST_TURNS:\n" + json.dumps(recent_summary)
-        },
-        {
-            "role": "user",
-            "content": user_input
-        }
+        {"role": "user", "content": user_input},
     ]
 
 
@@ -149,7 +123,7 @@ def call_ollama(messages):
         "model": MODEL_NAME,
         "messages": messages,
         "stream": False,
-        "format": "json"  # helps push the model toward strict JSON
+        "format": "json",  # helps push the model toward strict JSON
     }
     resp = requests.post(OLLAMA_API_URL, json=payload, timeout=60)
     resp.raise_for_status()
@@ -159,6 +133,7 @@ def call_ollama(messages):
 
 
 # ---------------- Rules enforcement ----------------
+
 
 def enforce_max_paragraphs(narration, max_paragraphs):
     paras = [p for p in narration.split("\n") if p.strip()]
@@ -172,13 +147,24 @@ def is_locked_destination(dest, rules, state):
     return not state["flags"].get(lock, False)
 
 
-def apply_state_changes(rules, state, state_changes):
-    """
-    Apply only legal atoms, enforcing:
-      - INVENTORY_LIMIT
-      - LOCKS
-      - hp_delta + hp_zero flag
-    """
+def apply_state_changes(rules, state, state_changes, user_input):
+    verb = user_input.lower().split()[0] if user_input else ""
+    if verb == "move":
+        direction = user_input.lower().split()[1]
+        current_location_name = state["location"]
+        current_location = rules.get("LOCATIONS", {}).get(current_location_name, {})
+        exits = current_location.get("exits", {})
+
+        if direction in exits:
+            destination = exits[direction]
+            if not is_locked_destination(destination, rules, state):
+                state["location"] = destination
+            else:
+                print(f"[Blocked] The way to {destination} is locked.")
+        else:
+            print("[Blocked] You can't go that way.")
+        return state
+
     inv_limit = int(rules.get("INVENTORY_LIMIT", 5))
 
     for atom in state_changes:
@@ -260,6 +246,7 @@ def check_end_conditions(rules, state):
 
 # ---------------- Main loop ----------------
 
+
 def print_help(rules):
     print("Available commands:")
     for c in rules["COMMANDS"]:
@@ -307,7 +294,9 @@ def main():
             print(f"\n*** {msg} ***")
             break
 
-        print(f"\n[Location: {state['location']}] HP: {state['hp']} Turn: {state['turns']}")
+        print(
+            f"\n[Location: {state['location']}] HP: {state['hp']} Turn: {state['turns']}"
+        )
         user_input = input("> ").strip()
 
         # meta commands (no LLM call)
@@ -334,7 +323,7 @@ def main():
             break
 
         # validate command against COMMANDS
-        if not is_valid_command(user_input, [c.lower() for c in rules["COMMANDS"]]):
+        if not is_valid_command(user_input, rules):
             print("Unknown or illegal command. Type 'help' for valid commands.")
             continue
 
@@ -355,7 +344,7 @@ def main():
                 if raw.lower().startswith("json"):
                     raw = raw[4:].lstrip()
             gm_reply = json.loads(raw)
-            
+
         except json.JSONDecodeError:
             print("[Invalid GM JSON, ignoring turn.]")
             append_transcript(f"PLAYER: {user_input}\nGM_INVALID: {raw}")
@@ -369,7 +358,7 @@ def main():
         narration = enforce_max_paragraphs(narration, max_p)
 
         # apply legal state changes
-        state = apply_state_changes(rules, state, state_changes)
+        state = apply_state_changes(rules, state, state_changes, user_input)
 
         # increment turns
         state["turns"] += 1
@@ -380,18 +369,11 @@ def main():
             print(textwrap.fill(narration, 80))
 
         # log to transcript
-        entry = {
-            "player": user_input,
-            "gm": gm_reply,
-            "state_after": state
-        }
+        entry = {"player": user_input, "gm": gm_reply, "state_after": state}
         append_transcript(json.dumps(entry, ensure_ascii=False))
 
         # add to in-memory history (for next prompts)
-        history.append({
-            "user": user_input,
-            "gm": gm_reply
-        })
+        history.append({"user": user_input, "gm": gm_reply})
 
 
 if __name__ == "__main__":
