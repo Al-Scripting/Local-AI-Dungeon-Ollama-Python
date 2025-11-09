@@ -1,0 +1,2 @@
+# Sample session transcript
+{"player": "talk yes I will try my best", "gm": {"narration": "The elder gestures towards you with a trembling hand. \"Speak with Silas, the blacksmith. He may have information about the Ancient Gate.\" \n\"He’s a grumpy sort, but he knows these lands better than anyone.\"", "state_change": []}, "state_after": {"location": "Village Square", "inventory": [], "flags": {"met_elder": true}, "hp": 10, "turns": 1}}

@@ -1,0 +1,39 @@
+{
+  "SFW": true,
+  "MAX_PARAGRAPHS": 2,
+  "INVENTORY_LIMIT": 5,
+  "COMMANDS": [
+    "look",
+    "move <place>",
+    "take <item>",
+    "use <item> on <target>",
+    "talk <npc>",
+    "inventory",
+    "help",
+    "save",
+    "load",
+    "quit"
+  ],
+  "LOCKS": {
+    "Ancient Gate": "have_key_a1",
+    "Crown Chamber": "have_gate_opened"
+  },
+  "QUEST": {
+    "name": "Find the Crown",
+    "goal_flag": "crown_recovered",
+    "intro": "The village elder begs you to recover the stolen Crown from the ruins beyond the Ancient Gate and return it safely."
+  },
+  "END_CONDITIONS": {
+    "WIN_ALL_FLAGS": ["crown_recovered", "returned_to_village"],
+    "LOSE_ANY_FLAGS": ["hp_zero"],
+    "MAX_TURNS": 50
+  },
+  "START": {
+    "location": "Village Square",
+    "inventory": [],
+    "flags": {
+      "met_elder": true
+    },
+    "hp": 10
+  }
+}
