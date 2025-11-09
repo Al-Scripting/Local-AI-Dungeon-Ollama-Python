@@ -2,9 +2,10 @@
   "SFW": true,
   "MAX_PARAGRAPHS": 2,
   "INVENTORY_LIMIT": 5,
+  "DIRECTIONS": ["north", "south", "east", "west", "left", "right"],
   "COMMANDS": [
     "look",
-    "move <place>",
+    "move <direction>",
     "take <item>",
     "use <item> on <target>",
     "talk <npc>",
@@ -14,6 +15,27 @@
     "load",
     "quit"
   ],
+  "LOCATIONS": {
+    "Village Square": {
+      "description": "You are in the bustling village square. A well sits in the center, and shops line the perimeter. A path leads north out of the village.",
+      "exits": {
+        "north": "Ruins Entrance"
+      }
+    },
+    "Ruins Entrance": {
+      "description": "You stand at the entrance to a crumbling ruin. A large, ancient gate blocks the way forward. The path you came from is to the south.",
+      "exits": {
+        "south": "Village Square",
+        "east": "Dark Forest"
+      }
+    },
+    "Dark Forest": {
+        "description": "You are in a dark, foreboding forest. The trees are thick and block out most of the light. A path leads west back to the ruins.",
+        "exits": {
+            "west": "Ruins Entrance"
+        }
+    }
+  },
   "LOCKS": {
     "Ancient Gate": "have_key_a1",
     "Crown Chamber": "have_gate_opened"
