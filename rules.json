@@ -1,39 +1,129 @@
 {
   "SFW": true,
   "MAX_PARAGRAPHS": 2,
-  "INVENTORY_LIMIT": 5,
+  "INVENTORY_LIMIT": 6,
+
+  "PROLOGUE": "In a fading kingdom on the brink of drought and unrest, the royal Crown has been stolen. Without it, the land’s last protective magic is dying. You are the one summoned by the village elder to cross the ruins, face what lurks in the dark, and bring the Crown home.",
+
   "COMMANDS": [
     "look",
-    "move <place>",
+    "move <direction>",
     "take <item>",
+    "search",
     "use <item> on <target>",
+    "talk",
     "talk <npc>",
+    "attack",
+    "defend",
+    "flee",
     "inventory",
     "help",
     "save",
     "load",
     "quit"
-  ],
+],
+
+    "LOCATION_DESCRIPTIONS": {
+    "Village Square": "You stand in the Village Square beside a dry well and shuttered stalls. The elder watches with urgent eyes.",
+    "Dark Forest": "You are in the Dark Forest. Gnarled trees blot the light and a damp chill clings to the air.",
+    "Ruins Entrance": "Broken pillars flank a shadowed arch. One base looks disturbed, as if something was pried loose there.",
+    "Ancient Gate": "A towering gate inscribed with faint runes bars the path. Power hums in the stone.",
+    "Crown Chamber": "A vast vault yawns ahead. On a dais rests the Crown, glinting in pale light."
+},
+
+  "MAP": {
+    "Village Square": {
+      "north": "Ruins Entrance",
+      "east": "Dark Forest"
+    },
+    "Dark Forest": {
+      "west": "Village Square",
+      "north": "Ruins Entrance"
+    },
+    "Ruins Entrance": {
+      "south": "Village Square",
+      "west": "Dark Forest",
+      "north": "Ancient Gate"
+    },
+    "Ancient Gate": {
+      "south": "Ruins Entrance",
+      "north": "Crown Chamber"
+    },
+    "Crown Chamber": {
+      "south": "Ancient Gate"
+    }
+  },
+
   "LOCKS": {
     "Ancient Gate": "have_key_a1",
     "Crown Chamber": "have_gate_opened"
   },
+
   "QUEST": {
     "name": "Find the Crown",
     "goal_flag": "crown_recovered",
     "intro": "The village elder begs you to recover the stolen Crown from the ruins beyond the Ancient Gate and return it safely."
   },
+
   "END_CONDITIONS": {
     "WIN_ALL_FLAGS": ["crown_recovered", "returned_to_village"],
     "LOSE_ANY_FLAGS": ["hp_zero"],
     "MAX_TURNS": 50
   },
+
   "START": {
     "location": "Village Square",
-    "inventory": [],
+    "inventory": ["rusty_sword"],
     "flags": {
       "met_elder": true
     },
-    "hp": 10
-  }
+    "hp": 12
+  },
+
+  "ENEMIES": {
+    "wolf": {
+      "name": "Wolf",
+      "hp": 7,
+      "atk_min": 1,
+      "atk_max": 2,
+      "flee_player_chance": 0.7,
+      "on_defeat_flag": "wolf_defeated",
+      "on_defeat_loot": []
+    },
+    "bandit": {
+      "name": "Bandit",
+      "hp": 9,
+      "atk_min": 1,
+      "atk_max": 3,
+      "flee_player_chance": 0.55,
+      "on_defeat_flag": "bandit_defeated",
+      "on_defeat_loot": ["key_a1"]
+    },
+    "skeletal_guard": {
+      "name": "Skeletal Guard",
+      "hp": 10,
+      "atk_min": 2,
+      "atk_max": 3,
+      "flee_player_chance": 0.45,
+      "on_defeat_flag": "guard_cleared",
+      "on_defeat_loot": ["bone_charm"]
+    }
+  },
+
+"ENCOUNTERS": {
+    "Dark Forest": [
+    { "id": "wolf", "chance": 0.40,
+        "intro": "A starving wolf slinks from the brush, teeth bared.",
+        "hint": "You are in combat: attack | defend | flee" },
+    { "id": "bandit", "chance": 0.60,
+        "intro": "A bandit leaps from behind a tree, dagger flashing.",
+        "hint": "You are in combat: attack | defend | flee" }
+],
+"Ruins Entrance": [
+    { "id": "skeletal_guard", "chance": 0.20,
+        "intro": "Bones knit themselves into a skeletal guard, eyes burning cold.",
+        "hint": "You are in combat: attack | defend | flee" }
+]
+}
+
 }
